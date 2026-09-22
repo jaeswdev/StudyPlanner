@@ -10,9 +10,13 @@ cost = hours * rate * rework, compared against the $30,000 budget from Part D.
 
 import random
 import statistics
+from pathlib import Path
 
 TRIALS = 10_000
 BUDGET = 30_000
+
+# Anchored to this file's folder so it works no matter where you run from.
+OUT = Path(__file__).parent / "cost_distribution.png"
 
 HOURS_LOW, HOURS_MODE, HOURS_HIGH = 250, 300, 380
 RATE_LOW, RATE_HIGH = 70, 100
@@ -54,5 +58,5 @@ if __name__ == "__main__":
     plt.ylabel("Trials")
     plt.title("Monte Carlo: total development cost (10,000 trials)")
     plt.legend()
-    plt.savefig("analysis/cost_distribution.png", dpi=150, bbox_inches="tight")
-    print("\nChart saved to analysis/cost_distribution.png")
+    plt.savefig(OUT, dpi=150, bbox_inches="tight")
+    print(f"\nChart saved to {OUT}")
