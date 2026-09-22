@@ -1,26 +1,39 @@
-"""Feature 2 — my planner: filter and mark done. Owned by Henry; do not
-edit db.py from here."""
+"""Filter assignments and mark completed work."""
 
 from datetime import datetime
+from html import escape
 
 import streamlit as st
 
 from db import STATUSES, init_db, list_tasks, update_status
+from ui import apply_elemental_theme, page_intro, show_task_companions
 
-DONE = STATUSES[-1]       # "Done", taken from db rather than retyped
-COLLISION_COURSES = 3     # courses with open work in one week that count as a collision
+DONE = STATUSES[-1]
+COLLISION_COURSES = 3
 
-st.set_page_config(page_title="My Planner", page_icon="📋", layout="centered")
+st.set_page_config(page_title="My Planner", page_icon="SP", layout="centered")
 init_db()
-
-st.title("My Planner")
-st.caption("Everything due, sorted by date. Filter it, then mark things done.")
+apply_elemental_theme()
+page_intro("Quest log", "My Planner", "Track the path ahead and prepare for difficult weeks.")
+st.markdown('<a class="scroll-top" href="#planner-top" aria-label="Scroll to top">↑<span>TOP</span></a>', unsafe_allow_html=True)
 
 all_tasks = list_tasks()
-
 if not all_tasks:
-    st.info("Nothing here yet — add an assignment on the Add Assignment page.")
+    st.info("Nothing here yet - add an assignment to begin your path.")
     st.stop()
+
+complete_count = sum(task["status"] == DONE for task in all_tasks)
+incomplete_count = len(all_tasks) - complete_count
+show_task_companions(incomplete_count, complete_count)
+
+progress = complete_count / len(all_tasks)
+st.markdown(
+    f'''<div class="progress-card">
+        <div class="progress-label"><span>Quest progress</span><strong>{complete_count}/{len(all_tasks)} complete</strong></div>
+        <div class="progress-track"><div class="progress-fill" style="width:{progress * 100:.1f}%"></div></div>
+    </div>''',
+    unsafe_allow_html=True,
+)
 
 
 def week_key(due_date: str) -> str:
@@ -28,49 +41,63 @@ def week_key(due_date: str) -> str:
     return f"{year}-W{week}"
 
 
-# three courses with unfinished work in the same Mon–Sun week is the collision
-# the app exists to surface; finished work no longer counts toward it
 week_courses: dict[str, set] = {}
-for t in all_tasks:
-    if t["status"] != DONE:
-        week_courses.setdefault(week_key(t["due_date"]), set()).add(t["course"])
-collision_weeks = {wk for wk, c in week_courses.items() if len(c) >= COLLISION_COURSES}
+for task in all_tasks:
+    if task["status"] != DONE:
+        week_courses.setdefault(week_key(task["due_date"]), set()).add(task["course"])
+collision_weeks = {week for week, courses in week_courses.items() if len(courses) >= COLLISION_COURSES}
 
-courses = sorted({t["course"] for t in all_tasks})
-col1, col2 = st.columns(2)
-with col1:
+st.markdown("### Choose your focus")
+courses = sorted({task["course"] for task in all_tasks})
+course_column, status_column = st.columns(2)
+with course_column:
     course_filter = st.selectbox("Course", ["All"] + courses)
-with col2:
+with status_column:
     status_filter = st.selectbox("Status", ["All"] + list(STATUSES))
 
 tasks = list_tasks(
     course=None if course_filter == "All" else course_filter,
     status=None if status_filter == "All" else status_filter,
 )
-
+st.markdown("### Active quests")
 if not tasks:
-    st.info("No assignments match that filter.")
+    st.info("No assignments match that focus.")
 
-for t in tasks:
-    wk = week_key(t["due_date"])
-    collision = t["status"] != DONE and wk in collision_weeks
+for task in tasks:
+    week = week_key(task["due_date"])
+    collision = task["status"] != DONE and week in collision_weeks
+
     with st.container(border=True):
-        left, right = st.columns([3, 1])
-        with left:
-            title = f"**{t['title']}** — {t['course']}"
+        details, actions = st.columns([3, 1])
+        with details:
+            st.markdown(
+                f'<div class="quest-title">{escape(task["title"])}</div>'
+                f'<span class="course-chip">{escape(task["course"])}</span>'
+                f'<div class="quest-meta">Due {escape(task["due_date"])} - '
+                f'{task["est_hours"]}h - {escape(task["priority"])} priority</div>',
+                unsafe_allow_html=True,
+            )
             if collision:
-                title += " ⚠️"
-            st.markdown(title)
-            st.caption(f"Due {t['due_date']} · {t['est_hours']}h · {t['priority']} priority")
-            if collision:
-                clash = ", ".join(sorted(week_courses[wk]))
-                st.caption(f"⚠️ {len(week_courses[wk])} courses have work due this week: {clash}")
-        with right:
-            st.markdown(f"`{t['status']}`")
-            if t["status"] != DONE and st.button("Mark done", key=f"done_{t['id']}"):
+                clash = ", ".join(sorted(week_courses[week]))
+                st.markdown('<span class="collision-badge">BUSY WEEK</span>', unsafe_allow_html=True)
+                st.caption(f"{len(week_courses[week])} courses have work due: {clash}")
+        with actions:
+            status_class = task["status"].lower().replace(" ", "-")
+            st.markdown(
+                f'<div class="status-label">STATUS</div><span class="status-badge status-{status_class}">{escape(task["status"])}</span>',
+                unsafe_allow_html=True,
+            )
+            selected_status = st.selectbox(
+                "Quest status",
+                STATUSES,
+                index=list(STATUSES).index(task["status"]),
+                key=f"status_{task['id']}",
+                label_visibility="collapsed",
+            )
+            if selected_status != task["status"]:
                 try:
-                    update_status(t["id"], DONE)
-                except (ValueError, TypeError) as e:
-                    st.error(f"Couldn't mark it done: {e}")
+                    update_status(task["id"], selected_status)
+                except (ValueError, TypeError) as error:
+                    st.error(f"Could not update status: {error}")
                 else:
                     st.rerun()
