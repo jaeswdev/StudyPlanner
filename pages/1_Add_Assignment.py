@@ -7,12 +7,12 @@ from datetime import date
 import streamlit as st
 
 from db import PRIORITIES, create_task, init_db
+from ui import apply_elemental_theme, page_intro
 
-st.set_page_config(page_title="Add Assignment", page_icon="+", layout="centered")
+st.set_page_config(page_title="Add Assignment", page_icon="SP", layout="centered")
 init_db()
-
-st.title("Add an Assignment")
-st.caption("Log something due, across any of your courses.")
+apply_elemental_theme()
+page_intro("Quest board", "Add an Assignment", "Start a new quest by giving each task a clear place in your semester.")
 
 # Success message survives the rerun below (it's set the run before this one).
 if "add_assignment_success" in st.session_state:

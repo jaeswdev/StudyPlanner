@@ -1,39 +1,38 @@
-"""
-Study Planner — home page.
-
-Streamlit turns every file in the pages/ folder into its own tab in the
-left sidebar, automatically. This file is only the landing page: it says
-what the app is. The two features live in pages/ and are owned by one
-person each, which is why neither of us ever edits this file after today.
-
-Run with:  streamlit run app.py
-"""
+"""Study Planner landing page."""
 
 import streamlit as st
 
-st.set_page_config(
-    page_title="Study Planner",
-    page_icon="📚",
-    layout="centered",
-)
+from ui import apply_elemental_theme, page_intro
 
-st.title("Study Planner")
-st.caption("CMPE 165 · Henry Lee & Anahi Carrasco")
+st.set_page_config(page_title="Study Planner", page_icon="SP", layout="centered")
+apply_elemental_theme()
+
+page_intro("Study quest", "Study Planner", "Plan your path across the semester.")
 
 st.markdown(
     """
-    A course-load planner for students taking several classes at once.
-
-    A calendar tells you **when** something is due. It cannot tell you that
-    three of your courses have major deliverables in the same week — and that
-    collision is what turns into a late withdrawal.
-
-    **Use the sidebar:**
-
-    - **Add Assignment** — record an assignment with its course and due date
-    - **My Planner** — everything sorted by due date, filterable, markable as done
-    """
+    <div class="welcome-card">
+      <h2>Stay ahead of the storm.</h2>
+      <p>Keep every assignment in one place, see busy weeks early, and make progress at your own pace.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
+plan, prepare, complete = st.columns(3)
+with plan:
+    st.page_link("pages/1_Add_Assignment.py", label="Plan", use_container_width=True)
+with prepare:
+    st.page_link("pages/2_My_Planner.py", label="Prepare", use_container_width=True)
+with complete:
+    st.page_link("pages/2_My_Planner.py", label="Complete", use_container_width=True)
+
+st.markdown("### Your path")
+left, right = st.columns(2)
+with left:
+    st.markdown("**01 - Add a quest**  \nRecord an assignment with its course, deadline, and effort.")
+with right:
+    st.markdown("**02 - Check your quest log**  \nReview what is due and finish tasks as you go.")
+
 st.divider()
-st.success("Environment check passed — if you can read this in a browser, you're set up.")
+st.info("Tip: use My Planner to spot weeks with several courses due at once.")
