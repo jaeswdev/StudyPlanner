@@ -1,4 +1,4 @@
-"""Feature 2 — my planner: filter and mark done. Owned by Anahi; do not
+"""Feature 2 — my planner: filter and mark done. Owned by Henry; do not
 edit db.py from here."""
 
 from datetime import datetime
@@ -6,6 +6,9 @@ from datetime import datetime
 import streamlit as st
 
 from db import STATUSES, init_db, list_tasks, update_status
+
+DONE = STATUSES[-1]       # "Done", taken from db rather than retyped
+COLLISION_COURSES = 3     # courses with open work in one week that count as a collision
 
 st.set_page_config(page_title="My Planner", page_icon="📋", layout="centered")
 init_db()
@@ -25,11 +28,13 @@ def week_key(due_date: str) -> str:
     return f"{year}-W{week}"
 
 
-# a week where 2+ courses have something due is the collision the app exists to surface
+# three courses with unfinished work in the same Mon–Sun week is the collision
+# the app exists to surface; finished work no longer counts toward it
 week_courses: dict[str, set] = {}
 for t in all_tasks:
-    week_courses.setdefault(week_key(t["due_date"]), set()).add(t["course"])
-collision_weeks = {wk for wk, courses in week_courses.items() if len(courses) > 1}
+    if t["status"] != DONE:
+        week_courses.setdefault(week_key(t["due_date"]), set()).add(t["course"])
+collision_weeks = {wk for wk, c in week_courses.items() if len(c) >= COLLISION_COURSES}
 
 courses = sorted({t["course"] for t in all_tasks})
 col1, col2 = st.columns(2)
@@ -47,7 +52,8 @@ if not tasks:
     st.info("No assignments match that filter.")
 
 for t in tasks:
-    collision = week_key(t["due_date"]) in collision_weeks
+    wk = week_key(t["due_date"])
+    collision = t["status"] != DONE and wk in collision_weeks
     with st.container(border=True):
         left, right = st.columns([3, 1])
         with left:
@@ -57,9 +63,14 @@ for t in tasks:
             st.markdown(title)
             st.caption(f"Due {t['due_date']} · {t['est_hours']}h · {t['priority']} priority")
             if collision:
-                st.caption("⚠️ Another course also has something due this week.")
+                clash = ", ".join(sorted(week_courses[wk]))
+                st.caption(f"⚠️ {len(week_courses[wk])} courses have work due this week: {clash}")
         with right:
             st.markdown(f"`{t['status']}`")
-            if t["status"] != "Done" and st.button("Mark done", key=f"done_{t['id']}"):
-                update_status(t["id"], "Done")
-                st.rerun()
+            if t["status"] != DONE and st.button("Mark done", key=f"done_{t['id']}"):
+                try:
+                    update_status(t["id"], DONE)
+                except (ValueError, TypeError) as e:
+                    st.error(f"Couldn't mark it done: {e}")
+                else:
+                    st.rerun()
