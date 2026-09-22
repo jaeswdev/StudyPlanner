@@ -1,0 +1,17 @@
+# Database - binary.
+*.db
+*.sqlite3
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Secretes
+.env
+.streamlit/secrets.toml
+
+# OS junk
+.DS_Store
+Thumbs.db
