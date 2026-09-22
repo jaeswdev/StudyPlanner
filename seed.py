@@ -14,24 +14,29 @@ import db
 
 TODAY = date.today()
 
+# Anchored to next Monday, not today, so the collision week below always lands
+# inside one Mon–Sun week whatever day you seed on. Every date is in the future.
+NEXT_MONDAY = TODAY + timedelta(days=7 - TODAY.weekday())
+
 
 def due_in(days):
-    """A 'YYYY-MM-DD' string for N days from today, so the data never goes stale."""
-    return (TODAY + timedelta(days=days)).isoformat()
+    """A 'YYYY-MM-DD' string for N days after next Monday, so the data never goes stale."""
+    return (NEXT_MONDAY + timedelta(days=days)).isoformat()
 
 
-# (title, course, days from today, estimated hours, priority)
+# (title, course, days after next Monday, estimated hours, priority)
 #
-# Days 3, 3 and 4 are deliberate: 17 hours of work landing in one week
-# across three courses. That collision is the whole product idea, and it
-# is what the Loom demo should show.
+# Wed, Wed and Thu of next week are deliberate: 17 hours of work landing in
+# one week across three courses. That collision is the whole product idea,
+# and it is what the Loom demo should show. The week after has only two
+# courses, so it must NOT be flagged.
 SAMPLE = [
-    ("Reading response 4",     "CMPE 165",  2,  1.5, "Low"),
-    ("Project 1 report",       "CMPE 165",  3,  8.0, "High"),     # ← collision
-    ("Lab 5 — paging",         "CS 149",    3,  5.0, "High"),     # ← collision
-    ("Midterm study guide",    "CS 157A",   4,  4.0, "Medium"),   # ← collision
-    ("Quiz 6",                 "CMPE 165",  9,  1.0, "Medium"),
-    ("Homework 3",             "CS 149",   11,  3.0, "Medium"),
+    ("Reading response 4",     "CMPE 165",  0,  1.5, "Low"),
+    ("Project 1 report",       "CMPE 165",  2,  8.0, "High"),     # ← collision
+    ("Lab 5 — paging",         "CS 149",    2,  5.0, "High"),     # ← collision
+    ("Midterm study guide",    "CS 157A",   3,  4.0, "Medium"),   # ← collision
+    ("Quiz 6",                 "CMPE 165",  8,  1.0, "Medium"),
+    ("Homework 3",             "CS 149",   10,  3.0, "Medium"),
     ("ER diagram draft",       "CS 157A",  14,  2.5, "Medium"),
     ("Final project proposal", "CS 157A",  21,  6.0, "High"),
 ]
